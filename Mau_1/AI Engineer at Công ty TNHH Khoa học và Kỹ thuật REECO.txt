@@ -1,0 +1,32 @@
+Mô tả công việc
+Công ty TNHH Khoa học và Kỹ thuật REECO là đơn vị tiên phong trong việc cung cấp các giải pháp công nghệ hiện đại, được xây dựng dựa trên sự kết hợp giữa sản phẩm, dịch vụ và tri thức chuyên sâu.
+
+Chúng tôi tự hào là Đơn vị được chứng nhận Hệ thống Quản lý Chất lượng ISO 9001:2015 và Quản lý An toàn sức khỏe nghề nghiệp ISO 45001:2018, được công nhận bởi Công ty kiểm định và chứng nhận hàng đầu thế giới SGS, chuyên cung cấp các sản phẩm và dịch vụ chất lượng cao.
+
+NHIỆM VỤ:
+
+Thiết kế và vận hành quy trình tự động thu thập, trích xuất dữ liệu từ các định dạng thô (Hình ảnh, PDF, Excel, Word...) để xây dựng kho tri thức cho công ty.
+Thiết kế, xây dựng và tối ưu hóa hệ thống truy xuất dữ liệu nội bộ để nâng cao chất lượng phản hồi của AI.
+Thiết kế cấu trúc metadata thông minh để hỗ trợ việc truy xuất dữ liệu có điều kiện và bảo mật thông tin theo phân quyền.
+Triển khai các framework đánh giá để đo lường và cải thiện độ chính xác của hệ thống AI.
+Thiết kế và triển khai các API RESTful để kết nối giữa LLM providers (OpenAI, Anthropic) với hệ thống hiện tại của công ty
+Đảm bảo tính bảo mật, hiệu suất và khả năng mở rộng của hệ thống AI.
+Thiết kế và triển khai các cơ sở dữ liệu SQL, NoSQL và đặc biệt là Vector Database phục vụ cho các ứng dụng AI.
+Chủ động nghiên cứu, cập nhật các giải pháp, công nghệ mới nhất để đề xuất ứng dụng vào hoạt động kinh doanh của Công ty.
+Hỗ trợ, hướng dẫn và chia sẻ kiến thức cho các thành viên khác trong nhóm.
+Thực hiện các công việc khác theo sự phân công của cấp trên và Ban Giám đốc
+Yêu cầu ứng viên
+Trình độ: Tốt nghiệp Cao đẳng trở lên, thuộc một trong các chuyên ngành: Công nghệ thông tin, Khoa học máy tính, …
+Trình độ: Tốt nghiệp Đại học trở lên chuyên ngành Công nghệ thông tin, Khoa học máy tính, hoặc các ngành liên quan.
+Kinh nghiệm làm việc: Tối thiểu 3 năm kinh nghiệm phát triển phần mềm, trong đó có ít nhất 01 - 02 năm kinh nghiệm thực tế triển khai các giải pháp AI (RAG, Chatbot, AI Agents, LLMs).
+Am hiểu sâu về quy trình triển khai RAG (Retrieval-Augmented Generation): ETL cho AI, Chunking strategies, Vector Embeddings, Semantic Search….
+Có kinh nghiệm sử dụng các thư viện AI như LangChain, LlamaIndex hoặc các framework multi-agent.
+Am hiểu quy trình ETL cho AI.
+Trình độ ngoại ngữ: Tiếng Anh tốt, có khả năng đọc hiểu sâu các tài liệu kỹ thuật.
+Thành thạo ngôn ngữ Python. Có kinh nghiệm làm việc với các Frontend frameworks như ReactJS hoặc Vue.js là một lợi thế.
+Có hiểu biết về kiến trúc Microservices, Event-driven (Kafka) và các nguyên lý SOLID.
+Công cụ năng suất: Biết cách tận dụng tối đa AI tools (Cursor, Copilot, MCP) để tối ưu hóa quy trình lập trình và tăng năng suất công việc.
+Kỹ năng mềm: Có khả năng tư duy giải quyết vấn đề tốt, năng động, sáng tạo và chịu được áp lực cao
+Có khả năng tự học và nghiên cứu các bài báo khoa học để cập nhật công nghệ AI mới nhất.
+Có khả năng đọc hiểu được cấu trúc hạ tầng code đã được xây dựng từ trước.
+Có năng lực tự chủ, tự chịu trách nhiệm và làm việc ở cường độ cao và chịu áp lực tốt.

@@ -1,0 +1,17 @@
+Mô tả công việc
+We are looking for a skilled Software Testing Engineer to join our team and contribute to various projects, including websites and mobile applications for both internal and external clients. As a QA/QC Engineer, you will be responsible for ensuring the quality and performance of mobile applications (native Android/iOS) and web applications (Front-end & API). Your key responsibilities include:
+
+Analyzing requirements, creating test cases, and developing test plans.
+Collaborating closely with the development team to clarify technical designs and ensure testability.
+Conducting research and proposing process improvements to enhance testing efficiency.
+Performing various testing types, including functional testing, performance testing, stress testing, and data flow validation.
+Ensuring application quality and compliance with Japanese market standards.
+Yêu cầu ứng viên
+At least 1 year of experience in manual testing (open to fresh graduates with strong potential).
+Strong knowledge of software testing processes, methodologies, and techniques.
+Experience with bug tracking and task management tools.
+Familiarity with QA software tools and automation frameworks is a plus
+Prior experience in testing projects related to the Japanese market is highly preferred.
+Excellent communication and interpersonal skills.
+Self-motivated, proactive, and detail-oriented.
+Strong teamwork and collaboration skills.

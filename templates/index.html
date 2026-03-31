@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAVN ATS - Hệ Thống Đối Sánh CV Thông Minh</title>
+    <meta name="description" content="Phân tích và đối sánh CV với mô tả công việc bằng AI. Đánh giá mức độ phù hợp, gợi ý cải thiện CV chi tiết.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Background animated particles -->
+    <div class="bg-particles" id="bgParticles"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 40 40" fill="none">
+                        <rect width="40" height="40" rx="10" fill="url(#logoGrad)"/>
+                        <path d="M12 28V16L20 12L28 16V28L20 24L12 28Z" fill="white" opacity="0.9"/>
+                        <path d="M20 12V24" stroke="white" stroke-width="1.5" opacity="0.6"/>
+                        <defs><linearGradient id="logoGrad" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="logo-text">PAVN <span class="accent">ATS</span></h1>
+                    <p class="logo-subtitle">AI-Powered CV Matching</p>
+                </div>
+            </div>
+            <div class="header-badges">
+                <span class="badge badge-ai">🤖 Gemini AI</span>
+                <span class="badge badge-ml">📊 ML Engine</span>
+                <span class="badge badge-lang">🌐 EN/VI</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Step 1: Input Section -->
+        <section class="section input-section" id="inputSection">
+            <div class="section-header">
+                <span class="step-badge">01</span>
+                <h2>Chọn CV & Mô Tả Công Việc</h2>
+                <p class="section-desc">Upload CV hoặc sử dụng CV mẫu, sau đó chọn JD để phân tích</p>
+            </div>
+
+            <div class="input-grid">
+                <!-- CV Panel -->
+                <div class="panel cv-panel">
+                    <div class="panel-header">
+                        <div class="panel-icon">📄</div>
+                        <h3>CV Ứng Viên</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="cv-info" id="cvInfo" style="display:none;">
+                            <div class="cv-loaded">
+                                <div class="cv-avatar">👤</div>
+                                <div class="cv-details">
+                                    <span class="cv-filename" id="cvFilename"></span>
+                                    <span class="cv-meta" id="cvMeta"></span>
+                                </div>
+                                <span class="cv-check">✓</span>
+                            </div>
+                        </div>
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                            </div>
+                            <p>Kéo thả CV (PDF) vào đây</p>
+                            <span class="upload-or">hoặc</span>
+                            <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">Chọn file</button>
+                            <input type="file" id="fileInput" accept=".pdf" hidden>
+                        </div>
+                        <button class="btn btn-ghost" id="useSampleCv" style="display:none;">
+                            ✨ Sử dụng CV mẫu có sẵn
+                        </button>
+                    </div>
+                </div>
+
+                <!-- JD Panel -->
+                <div class="panel jd-panel">
+                    <div class="panel-header">
+                        <div class="panel-icon">📋</div>
+                        <h3>Mô Tả Công Việc (JD)</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="jd-tabs" id="jdTabs">
+                            <!-- JD tabs will be populated by JS -->
+                        </div>
+                        <div class="jd-custom-area">
+                            <textarea id="jdCustomText" placeholder="Hoặc dán mô tả công việc tại đây..." rows="6"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-bar">
+                <button class="btn btn-primary btn-lg" id="analyzeBtn" onclick="analyzeSingle()">
+                    <span class="btn-icon">🔍</span>
+                    Phân Tích CV
+                    <span class="btn-shimmer"></span>
+                </button>
+                <button class="btn btn-secondary btn-lg" id="batchBtn" onclick="analyzeBatch()">
+                    <span class="btn-icon">⚡</span>
+                    So Sánh Tất Cả JD
+                </button>
+            </div>
+        </section>
+
+        <!-- Loading -->
+        <section class="section loading-section" id="loadingSection" style="display:none;">
+            <div class="loading-container">
+                <div class="loading-spinner">
+                    <div class="spinner-ring"></div>
+                    <div class="spinner-ring"></div>
+                    <div class="spinner-ring"></div>
+                </div>
+                <h3 class="loading-text">Đang phân tích...</h3>
+                <p class="loading-detail" id="loadingDetail">Đang chạy ML Engine & Gemini AI</p>
+                <div class="loading-steps">
+                    <div class="load-step active" id="step1"><span>📊</span> TF-IDF Analysis</div>
+                    <div class="load-step" id="step2"><span>🔤</span> Keyword Extraction</div>
+                    <div class="load-step" id="step3"><span>🤖</span> Gemini AI Analysis</div>
+                    <div class="load-step" id="step4"><span>✨</span> Generating Results</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Error Section -->
+        <section class="section error-section" id="errorSection" style="display:none;">
+            <div class="error-card">
+                <div class="error-icon">⚠️</div>
+                <h3 id="errorTitle">Lỗi Rate Limit</h3>
+                <p id="errorMessage"></p>
+                <button class="btn btn-primary" onclick="hideError()">Thử lại</button>
+            </div>
+        </section>
+
+        <!-- Results Section - Single Analysis -->
+        <section class="section results-section" id="resultsSection" style="display:none;">
+            <!-- Overall Score -->
+            <div class="score-hero" id="scoreHero">
+                <div class="score-ring-container">
+                    <svg class="score-ring" viewBox="0 0 200 200">
+                        <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="12"/>
+                        <circle class="score-ring-progress" cx="100" cy="100" r="85" fill="none" stroke-width="12"
+                                stroke-linecap="round" stroke-dasharray="534" stroke-dashoffset="534"
+                                transform="rotate(-90 100 100)"/>
+                    </svg>
+                    <div class="score-value">
+                        <span class="score-number" id="overallScore">0</span>
+                        <span class="score-percent">%</span>
+                    </div>
+                </div>
+                <div class="score-info">
+                    <h2 class="score-label">Mức độ phù hợp: <span id="matchLevel" class="match-level">--</span></h2>
+                    <p class="score-summary" id="scoreSummary"></p>
+                    <div class="score-badges" id="scoreBadges"></div>
+                </div>
+            </div>
+
+            <!-- Radar Chart + Dimension Scores -->
+            <div class="analysis-grid">
+                <div class="panel radar-panel">
+                    <div class="panel-header">
+                        <div class="panel-icon">📊</div>
+                        <h3>Phân Tích Đa Chiều</h3>
+                    </div>
+                    <div class="panel-body">
+                        <canvas id="radarChart" width="400" height="400"></canvas>
+                    </div>
+                </div>
+
+                <div class="panel scores-panel">
+                    <div class="panel-header">
+                        <div class="panel-icon">📈</div>
+                        <h3>Chi Tiết Điểm Số</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="dimension-scores" id="dimensionScores"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skills Gap Analysis -->
+            <div class="panel gap-panel" id="gapPanel">
+                <div class="panel-header">
+                    <div class="panel-icon">🎯</div>
+                    <h3>Gap Analysis - Kỹ Năng</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="skills-grid" id="skillsGrid"></div>
+                </div>
+            </div>
+
+            <!-- AI Suggestions -->
+            <div class="panel suggestions-panel" id="suggestionsPanel" style="display:none;">
+                <div class="panel-header">
+                    <div class="panel-icon">💡</div>
+                    <h3>Gợi Ý Cải Thiện CV (AI)</h3>
+                    <span class="ai-badge">Powered by Gemini</span>
+                </div>
+                <div class="panel-body">
+                    <div id="suggestions"></div>
+                </div>
+            </div>
+
+            <!-- ATS Compatibility -->
+            <div class="panel ats-panel" id="atsPanel" style="display:none;">
+                <div class="panel-header">
+                    <div class="panel-icon">🤖</div>
+                    <h3>ATS Compatibility Check</h3>
+                </div>
+                <div class="panel-body">
+                    <div id="atsContent"></div>
+                </div>
+            </div>
+
+            <!-- Recommended Courses -->
+            <div class="panel courses-panel" id="coursesPanel" style="display:none;">
+                <div class="panel-header">
+                    <div class="panel-icon">📚</div>
+                    <h3>Khóa Học Đề Xuất</h3>
+                </div>
+                <div class="panel-body">
+                    <div id="coursesContent"></div>
+                </div>
+            </div>
+
+            <!-- Back Button -->
+            <div class="action-bar">
+                <button class="btn btn-outline btn-lg" onclick="backToInput()">
+                    ← Phân tích JD khác
+                </button>
+            </div>
+        </section>
+
+        <!-- Batch Results -->
+        <section class="section batch-section" id="batchSection" style="display:none;">
+            <div class="section-header">
+                <span class="step-badge">📊</span>
+                <h2>So Sánh Nhiều Vị Trí</h2>
+                <p class="section-desc">Xếp hạng mức độ phù hợp với từng vị trí</p>
+            </div>
+            <div id="batchResults"></div>
+            <div class="action-bar">
+                <button class="btn btn-outline btn-lg" onclick="backToInput()">← Quay lại</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>PAVN ATS © 2026 — Hybrid AI + ML Engine — <span class="footer-accent">Vượt trội hơn TopCV</span></p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
