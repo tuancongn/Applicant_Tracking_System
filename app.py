@@ -132,6 +132,8 @@ def analyze():
     if not cv_text or not jd_text:
         return jsonify({'error': 'Cần cung cấp CV text và JD text'}), 400
 
+    print(f"\n[API] Phân tích CV: {cv_id or 'Upload CV'} × JD: {jd_id or 'Custom JD'} (Mode: {mode})")
+
     try:
         result = analyze_cv_jd(cv_text, jd_text, mode=mode)
 

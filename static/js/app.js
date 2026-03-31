@@ -5,10 +5,12 @@
 
 // ====== State ======
 let state = {
-    cvText: '',
+    cvText: '',       // used only for custom uploaded CV
+    cvId: '',         // used for sample CV
     cvFilename: '',
     selectedJdId: '',
     jds: [],
+    cvs: [],
     currentResult: null,
 };
 
@@ -26,9 +28,12 @@ async function loadSampleData() {
         const res = await fetch('/api/sample-data');
         const data = await res.json();
 
-        // Load CV info
-        if (data.cv) {
-            state.cvFilename = data.cv.filename;
+        // Load CV tabs
+        if (data.cv_list && data.cv_list.length > 0) {
+            state.cvs = data.cv_list;
+            renderCvTabs(data.cv_list);
+        } else if (data.cv) {
+            // fallback
             showCvInfo(data.cv);
         }
 
@@ -42,31 +47,55 @@ async function loadSampleData() {
     }
 }
 
+function renderCvTabs(cvs) {
+    const container = document.getElementById('cvTabs');
+    if (!container) return;
+
+    container.innerHTML = cvs.map((cv, i) => `
+        <button class="jd-tab cv-tab-btn ${i === 0 ? 'active' : ''}" data-cv-id="${cv.filename}" onclick="selectCv(this, '${cv.filename}')">
+            <span class="jd-tab-radio"></span>
+            <span class="jd-tab-name">${cv.filename.replace('.pdf', '')}</span>
+            ${cv.error ? '<span style="color:red; font-size:12px; margin-left: 5px;">(Lỗi)</span>' : ''}
+        </button>
+    `).join('');
+
+    // Auto-select first CV
+    if (cvs.length > 0) {
+        selectCv(container.querySelector('.cv-tab-btn'), cvs[0].filename);
+    }
+}
+
+function selectCv(btn, cvId) {
+    // Clear custom uploaded info
+    state.cvText = '';
+    document.getElementById('cvInfo').style.display = 'none';
+    document.getElementById('uploadArea').style.display = 'none';
+
+    // Update active state
+    document.querySelectorAll('.cv-tab-btn').forEach(t => t.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    
+    state.cvId = cvId;
+}
+
 function showCvInfo(cv) {
     const cvInfo = document.getElementById('cvInfo');
     const cvFilename = document.getElementById('cvFilename');
     const cvMeta = document.getElementById('cvMeta');
-    const useSampleBtn = document.getElementById('useSampleCv');
 
     if (cv && cv.filename) {
-        // Show the use sample button
-        useSampleBtn.style.display = 'block';
-        useSampleBtn.onclick = () => {
-            state.cvText = ''; // Will use sample on server
-            cvFilename.textContent = cv.filename;
-            const metaParts = [];
-            if (cv.metadata?.language) metaParts.push(`Ngôn ngữ: ${cv.metadata.language === 'vi' ? 'Tiếng Việt' : 'English'}`);
-            if (cv.metadata?.email) metaParts.push(cv.metadata.email);
-            if (cv.word_count) metaParts.push(`${cv.word_count} từ`);
-            if (cv.metadata?.pages) metaParts.push(`${cv.metadata.pages} trang`);
-            cvMeta.textContent = metaParts.join(' • ');
-            cvInfo.style.display = 'block';
-            document.getElementById('uploadArea').style.display = 'none';
-            useSampleBtn.style.display = 'none';
-        };
-
-        // Auto-load sample CV
-        useSampleBtn.click();
+        cvFilename.textContent = cv.filename;
+        const metaParts = [];
+        if (cv.metadata?.language) metaParts.push(`Ngôn ngữ: ${cv.metadata.language === 'vi' ? 'Tiếng Việt' : 'English'}`);
+        if (cv.metadata?.email) metaParts.push(cv.metadata.email);
+        if (cv.word_count) metaParts.push(`${cv.word_count} từ`);
+        if (cv.metadata?.pages) metaParts.push(`${cv.metadata.pages} trang`);
+        cvMeta.textContent = metaParts.join(' • ');
+        
+        // Hide standard tabs, show uploaded info
+        document.getElementById('cvTabs').style.display = 'none';
+        cvInfo.style.display = 'block';
+        document.getElementById('uploadArea').style.display = 'none';
     }
 }
 
@@ -144,6 +173,7 @@ async function uploadFile(file) {
         }
 
         state.cvText = data.data.raw_text;
+        state.cvId = ''; // Not a sample CV
         state.cvFilename = data.filename;
 
         document.getElementById('cvFilename').textContent = data.filename;
@@ -152,9 +182,13 @@ async function uploadFile(file) {
         if (data.data.metadata?.email) metaParts.push(data.data.metadata.email);
         if (data.data.word_count) metaParts.push(`${data.data.word_count} từ`);
         document.getElementById('cvMeta').textContent = metaParts.join(' • ');
+        
+        // Hide sample tabs
+        const cvTabs = document.getElementById('cvTabs');
+        if (cvTabs) cvTabs.style.display = 'none';
+        
         document.getElementById('cvInfo').style.display = 'block';
         document.getElementById('uploadArea').style.display = 'none';
-        document.getElementById('useSampleCv').style.display = 'none';
     } catch (err) {
         alert('Lỗi upload: ' + err.message);
     }
@@ -173,9 +207,13 @@ async function analyzeSingle() {
     showLoading();
 
     try {
-        const body = {
-            cv_text: state.cvText,
-        };
+        const body = {};
+
+        if (state.cvText) {
+            body.cv_text = state.cvText;
+        } else if (state.cvId) {
+            body.cv_id = state.cvId;
+        }
 
         if (customJd) {
             body.jd_text = customJd;
@@ -217,13 +255,16 @@ async function analyzeBatch() {
     showLoading();
 
     try {
+        const body = {
+            jd_ids: state.jds.map(j => j.id),
+        };
+        if (state.cvText) body.cv_text = state.cvText;
+        if (state.cvId) body.cv_id = state.cvId;
+
         const res = await fetch('/api/batch-analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                cv_text: state.cvText,
-                jd_ids: state.jds.map(j => j.id),
-            }),
+            body: JSON.stringify(body),
         });
 
         const data = await res.json();

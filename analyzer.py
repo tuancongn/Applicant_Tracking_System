@@ -27,11 +27,16 @@ load_dotenv()
 # ============================================================
 # AUTO-DETECT AI PROVIDER từ API key trong .env
 # ============================================================
-API_KEY = os.getenv('API_KEY') or os.getenv('GEMINI_API_KEY') or ''
+ENABLE_AI = os.getenv('ENABLE_AI', 'YES').strip().upper() == 'YES'
+API_KEY = os.getenv('API_KEY') or os.getenv('OPENROUTER_API_KEY') or os.getenv('GEMINI_API_KEY') or ''
 
 def _detect_provider():
     """Auto-detect AI provider from API key prefix."""
-    if API_KEY.startswith('ghp_'):
+    if not ENABLE_AI:
+        return None, None
+    if API_KEY.startswith('sk-or-v1-'):
+        return 'openrouter', 'stepfun/step-3.5-flash:free'
+    elif API_KEY.startswith('ghp_'):
         return 'github', 'DeepSeek-R1-0528'
     elif API_KEY.startswith('AIzaSy'):
         return 'gemini', 'gemini-2.5-flash'
@@ -40,7 +45,10 @@ def _detect_provider():
     return None, None
 
 AI_PROVIDER, AI_MODEL = _detect_provider()
-print(f"[AI Config] Provider: {AI_PROVIDER or 'None'} | Model: {AI_MODEL or 'No key'}")
+if ENABLE_AI:
+    print(f"[AI Config] Provider: {AI_PROVIDER or 'None'} | Model: {AI_MODEL or 'No key'}")
+else:
+    print("[AI Config] AI is DISABLED globally (chỉ chạy local).")
 
 # ============================================================
 # SEMANTIC EMBEDDING MODEL — multilingual-e5-large
@@ -321,7 +329,7 @@ class LocalAnalyzer:
         }
 
         # 5. Domain-agnostic dimensions
-        experience = self._match_experience()
+        experience = self._match_experience(semantic_score)
         education = self._match_education()
         language = self._match_language()
         soft_skills = self._match_soft_skills()
@@ -350,14 +358,14 @@ class LocalAnalyzer:
                 ngram_score * 0.05
             )
 
-        # Domain mismatch penalty (semantic + keyword combined)
+        # Domain mismatch penalty (only for clearly unrelated domains)
         combined_domain_signal = (semantic_score + keyword_match['score']) / 2
-        if combined_domain_signal < 8:
-            local_score *= 0.30  # 70% penalty: completely different domain
-        elif combined_domain_signal < 15:
-            local_score *= 0.50  # 50% penalty
-        elif combined_domain_signal < 25:
-            local_score *= 0.75  # 25% penalty
+        if combined_domain_signal < 10:
+            local_score *= 0.30  # 70% penalty: completely different domain (e.g. Chef vs IT)
+        elif combined_domain_signal < 20:
+            local_score *= 0.55  # 45% penalty: very different
+        elif combined_domain_signal < 30:
+            local_score *= 0.80  # 20% penalty: somewhat different
 
         # Build backward-compatible result
         if self.is_it:
@@ -461,14 +469,13 @@ class LocalAnalyzer:
                 sim = _compute_similarity(cv_sec, jd_sec)
                 sections[cv_key] = round(sim * 100, 1)
 
-        # Scale: e5-large gives cosine 0.70-0.90 for most doc pairs
-        # Tighter scaling to differentiate:
-        #   0.85+ → 85-100% (very relevant, same domain)
-        #   0.80  → 55-65%  (somewhat relevant)
-        #   0.76  → 25-35%  (different domain)
-        #   0.70  → ~0%     (completely unrelated)
-        floor = 0.70
-        ceiling = 0.88
+        # Scale: e5-large cosine similarity interpretation
+        # Cross-language pairs (EN↔JP, VN↔JP) typically get 0.74-0.82
+        # Same-language, same-domain pairs get 0.82-0.92
+        # Completely unrelated pairs get 0.65-0.72
+        # Use wider range to avoid over-penalizing cross-language matches
+        floor = 0.65
+        ceiling = 0.90
         overall_scaled = max(0, (overall_sim - floor) / (ceiling - floor)) * 100
         overall_scaled = min(overall_scaled, 100)
 
@@ -611,7 +618,7 @@ class LocalAnalyzer:
             'missing': sorted(list(jd_set - cv_set)),
         }
 
-    def _match_experience(self) -> dict:
+    def _match_experience(self, semantic_score: float) -> dict:
         """Match experience years (domain-agnostic, bilingual)."""
         jd_years_patterns = [
             r'(\d+)\+?\s*(?:năm|years?)\s*(?:kinh\s*nghiệm|experience)',
@@ -649,6 +656,17 @@ class LocalAnalyzer:
             score = (cv_years / jd_years) * 100
         else:
             score = 30.0
+
+        # DOMAIN PENALTY for Experience:
+        # Nếu kinh nghiệm nhiều nhưng trái ngành (semantic_score thấp) thì vô giá trị
+        # Ngưỡng phạt được hiệu chuẩn cho cross-language matching
+        if semantic_score < 25.0:
+            score *= 0.1  # Phạt 90%: hoàn toàn trái ngành (Tài xế ↔ IT)
+        elif semantic_score < 40.0:
+            score *= 0.4  # Phạt 60%: ngành khác khá nhiều
+        elif semantic_score < 55.0:
+            score *= 0.7  # Phạt 30%: có liên quan nhưng không đúng chuyên môn sâu
+
 
         return {
             'score': round(min(score, 100), 1),
@@ -814,8 +832,37 @@ Provide your analysis as a JSON object with this EXACT structure:
 
     def _call_api(self, prompt: str) -> str:
         """Route to correct provider."""
-        if self.provider == 'github':
-            return self._call_github(prompt)
+        if self.provider in ['github', 'openrouter']:
+            url = 'https://models.inference.ai.azure.com/chat/completions' if self.provider == 'github' else 'https://openrouter.ai/api/v1/chat/completions'
+            
+            headers = {
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json"
+            }
+            if self.provider == 'openrouter':
+                headers["HTTP-Referer"] = "http://localhost:5000"
+                headers["X-Title"] = "PAVN ATS"
+
+            print(f"[{self.model}] Calling {self.provider.capitalize()} API...")
+            
+            resp = requests.post(
+                url,
+                headers=headers,
+                json={
+                    "model": self.model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.2
+                },
+                timeout=60
+            )
+
+            print(f"[{self.model}] Response status: {resp.status_code}")
+            if resp.status_code != 200:
+                raise Exception(f"API error {resp.status_code}: {resp.text}")
+            
+            content = resp.json()['choices'][0]['message']['content']
+            return re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+
         elif self.provider == 'gemini':
             return self._call_gemini(prompt)
         else:
@@ -1053,8 +1100,8 @@ class HybridAnalyzer:
             'error': None,
         }
 
-        # Layer 2: AI analysis (skip if mode='local')
-        if self.mode in ('ai', 'hybrid'):
+        # Layer 2: AI analysis (skip if mode='local' or ENABLE_AI is False)
+        if self.mode in ('ai', 'hybrid') and ENABLE_AI:
             try:
                 ai = AIAnalyzer()
                 ai_results = ai.analyze(self.cv_text, self.jd_text, local_results)

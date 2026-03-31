@@ -58,6 +58,11 @@
                         <h3>CV Ứng Viên</h3>
                     </div>
                     <div class="panel-body">
+                        <!-- Chọn CV mẫu -->
+                        <div class="jd-tabs" id="cvTabs" style="margin-bottom: 15px;">
+                            <!-- CV tabs will be populated by JS -->
+                        </div>
+
                         <div class="cv-info" id="cvInfo" style="display:none;">
                             <div class="cv-loaded">
                                 <div class="cv-avatar">👤</div>
@@ -81,8 +86,8 @@
                             <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">Chọn file</button>
                             <input type="file" id="fileInput" accept=".pdf" hidden>
                         </div>
-                        <button class="btn btn-ghost" id="useSampleCv" style="display:none;">
-                            ✨ Sử dụng CV mẫu có sẵn
+                        <button class="btn btn-ghost" id="useSampleCv" onclick="document.getElementById('fileInput').click()" style="margin-top: 10px; width: 100%;">
+                            📁 Tải lên CV khác...
                         </button>
                     </div>
                 </div>
