@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAVN ATS - Hệ Thống Đối Sánh CV Thông Minh</title>
-    <meta name="description" content="Phân tích và đối sánh CV với mô tả công việc bằng AI. Đánh giá mức độ phù hợp, gợi ý cải thiện CV chi tiết.">
+    <title>PAVN ATS - Intelligent CV Matching System</title>
+    <meta name="description" content="AI-powered CV-to-Job matching system. Evaluate candidate fit, skill gaps, and CV improvements with hybrid ML + AI analysis.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -35,7 +35,7 @@
             <div class="header-badges">
                 <span class="badge badge-ai">🤖 Gemini AI</span>
                 <span class="badge badge-ml">📊 ML Engine</span>
-                <span class="badge badge-lang">🌐 EN/VI</span>
+                <span class="badge badge-lang">🌐 Multilingual</span>
             </div>
         </div>
     </header>
@@ -46,8 +46,8 @@
         <section class="section input-section" id="inputSection">
             <div class="section-header">
                 <span class="step-badge">01</span>
-                <h2>Chọn CV & Mô Tả Công Việc</h2>
-                <p class="section-desc">Upload CV hoặc sử dụng CV mẫu, sau đó chọn JD để phân tích</p>
+                <h2>Select CV & Job Description</h2>
+                <p class="section-desc">Upload a CV or use a sample, then select a JD to analyze</p>
             </div>
 
             <div class="input-grid">
@@ -55,10 +55,10 @@
                 <div class="panel cv-panel">
                     <div class="panel-header">
                         <div class="panel-icon">📄</div>
-                        <h3>CV Ứng Viên</h3>
+                        <h3>Candidate CV</h3>
                     </div>
                     <div class="panel-body">
-                        <!-- Chọn CV mẫu -->
+                        <!-- CV Tabs -->
                         <div class="jd-tabs" id="cvTabs" style="margin-bottom: 15px;">
                             <!-- CV tabs will be populated by JS -->
                         </div>
@@ -81,13 +81,13 @@
                                     <line x1="12" y1="3" x2="12" y2="15"/>
                                 </svg>
                             </div>
-                            <p>Kéo thả CV (PDF) vào đây</p>
-                            <span class="upload-or">hoặc</span>
-                            <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">Chọn file</button>
+                            <p>Drag & drop CV (PDF) here</p>
+                            <span class="upload-or">or</span>
+                            <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">Browse file</button>
                             <input type="file" id="fileInput" accept=".pdf" hidden>
                         </div>
                         <button class="btn btn-ghost" id="useSampleCv" onclick="document.getElementById('fileInput').click()" style="margin-top: 10px; width: 100%;">
-                            📁 Tải lên CV khác...
+                            📁 Upload another CV...
                         </button>
                     </div>
                 </div>
@@ -96,14 +96,14 @@
                 <div class="panel jd-panel">
                     <div class="panel-header">
                         <div class="panel-icon">📋</div>
-                        <h3>Mô Tả Công Việc (JD)</h3>
+                        <h3>Job Description (JD)</h3>
                     </div>
                     <div class="panel-body">
                         <div class="jd-tabs" id="jdTabs">
                             <!-- JD tabs will be populated by JS -->
                         </div>
                         <div class="jd-custom-area">
-                            <textarea id="jdCustomText" placeholder="Hoặc dán mô tả công việc tại đây..." rows="6"></textarea>
+                            <textarea id="jdCustomText" placeholder="Or paste a job description here..." rows="6"></textarea>
                         </div>
                     </div>
                 </div>
@@ -113,12 +113,12 @@
             <div class="action-bar">
                 <button class="btn btn-primary btn-lg" id="analyzeBtn" onclick="analyzeSingle()">
                     <span class="btn-icon">🔍</span>
-                    Phân Tích CV
+                    Analyze CV
                     <span class="btn-shimmer"></span>
                 </button>
                 <button class="btn btn-secondary btn-lg" id="batchBtn" onclick="analyzeBatch()">
                     <span class="btn-icon">⚡</span>
-                    So Sánh Tất Cả JD
+                    Compare All JDs
                 </button>
             </div>
         </section>
@@ -131,12 +131,12 @@
                     <div class="spinner-ring"></div>
                     <div class="spinner-ring"></div>
                 </div>
-                <h3 class="loading-text">Đang phân tích...</h3>
-                <p class="loading-detail" id="loadingDetail">Đang chạy ML Engine & Gemini AI</p>
+                <h3 class="loading-text">Analyzing...</h3>
+                <p class="loading-detail" id="loadingDetail">Running ML Engine & AI Analysis</p>
                 <div class="loading-steps">
-                    <div class="load-step active" id="step1"><span>📊</span> TF-IDF Analysis</div>
+                    <div class="load-step active" id="step1"><span>📊</span> Semantic Embedding</div>
                     <div class="load-step" id="step2"><span>🔤</span> Keyword Extraction</div>
-                    <div class="load-step" id="step3"><span>🤖</span> Gemini AI Analysis</div>
+                    <div class="load-step" id="step3"><span>🤖</span> AI Analysis</div>
                     <div class="load-step" id="step4"><span>✨</span> Generating Results</div>
                 </div>
             </div>
@@ -146,9 +146,9 @@
         <section class="section error-section" id="errorSection" style="display:none;">
             <div class="error-card">
                 <div class="error-icon">⚠️</div>
-                <h3 id="errorTitle">Lỗi Rate Limit</h3>
+                <h3 id="errorTitle">Rate Limit Error</h3>
                 <p id="errorMessage"></p>
-                <button class="btn btn-primary" onclick="hideError()">Thử lại</button>
+                <button class="btn btn-primary" onclick="hideError()">Try Again</button>
             </div>
         </section>
 
@@ -169,7 +169,7 @@
                     </div>
                 </div>
                 <div class="score-info">
-                    <h2 class="score-label">Mức độ phù hợp: <span id="matchLevel" class="match-level">--</span></h2>
+                    <h2 class="score-label">Match Level: <span id="matchLevel" class="match-level">--</span></h2>
                     <p class="score-summary" id="scoreSummary"></p>
                     <div class="score-badges" id="scoreBadges"></div>
                 </div>
@@ -180,7 +180,7 @@
                 <div class="panel radar-panel">
                     <div class="panel-header">
                         <div class="panel-icon">📊</div>
-                        <h3>Phân Tích Đa Chiều</h3>
+                        <h3>Multi-Dimensional Analysis</h3>
                     </div>
                     <div class="panel-body">
                         <canvas id="radarChart" width="400" height="400"></canvas>
@@ -190,7 +190,7 @@
                 <div class="panel scores-panel">
                     <div class="panel-header">
                         <div class="panel-icon">📈</div>
-                        <h3>Chi Tiết Điểm Số</h3>
+                        <h3>Dimension Scores</h3>
                     </div>
                     <div class="panel-body">
                         <div class="dimension-scores" id="dimensionScores"></div>
@@ -202,7 +202,7 @@
             <div class="panel gap-panel" id="gapPanel">
                 <div class="panel-header">
                     <div class="panel-icon">🎯</div>
-                    <h3>Gap Analysis - Kỹ Năng</h3>
+                    <h3>Skills Gap Analysis</h3>
                 </div>
                 <div class="panel-body">
                     <div class="skills-grid" id="skillsGrid"></div>
@@ -213,8 +213,8 @@
             <div class="panel suggestions-panel" id="suggestionsPanel" style="display:none;">
                 <div class="panel-header">
                     <div class="panel-icon">💡</div>
-                    <h3>Gợi Ý Cải Thiện CV (AI)</h3>
-                    <span class="ai-badge">Powered by Gemini</span>
+                    <h3>CV Improvement Suggestions (AI)</h3>
+                    <span class="ai-badge">Powered by AI</span>
                 </div>
                 <div class="panel-body">
                     <div id="suggestions"></div>
@@ -236,7 +236,7 @@
             <div class="panel courses-panel" id="coursesPanel" style="display:none;">
                 <div class="panel-header">
                     <div class="panel-icon">📚</div>
-                    <h3>Khóa Học Đề Xuất</h3>
+                    <h3>Recommended Courses</h3>
                 </div>
                 <div class="panel-body">
                     <div id="coursesContent"></div>
@@ -246,7 +246,7 @@
             <!-- Back Button -->
             <div class="action-bar">
                 <button class="btn btn-outline btn-lg" onclick="backToInput()">
-                    ← Phân tích JD khác
+                    ← Analyze Another JD
                 </button>
             </div>
         </section>
@@ -255,19 +255,19 @@
         <section class="section batch-section" id="batchSection" style="display:none;">
             <div class="section-header">
                 <span class="step-badge">📊</span>
-                <h2>So Sánh Nhiều Vị Trí</h2>
-                <p class="section-desc">Xếp hạng mức độ phù hợp với từng vị trí</p>
+                <h2>Multi-Position Comparison</h2>
+                <p class="section-desc">Rankings by match level across all positions</p>
             </div>
             <div id="batchResults"></div>
             <div class="action-bar">
-                <button class="btn btn-outline btn-lg" onclick="backToInput()">← Quay lại</button>
+                <button class="btn btn-outline btn-lg" onclick="backToInput()">← Back</button>
             </div>
         </section>
     </main>
 
     <!-- Footer -->
     <footer class="footer">
-        <p>PAVN ATS © 2026 — Hybrid AI + ML Engine — <span class="footer-accent">Vượt trội hơn TopCV</span></p>
+        <p>PAVN ATS © 2026 — Hybrid AI + ML Engine — <span class="footer-accent">Enterprise-Grade CV Matching</span></p>
     </footer>
 
     <script src="/static/js/app.js"></script>

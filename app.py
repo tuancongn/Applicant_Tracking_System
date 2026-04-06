@@ -130,9 +130,9 @@ def analyze():
             cv_text = target_cv['data']['raw_text']
 
     if not cv_text or not jd_text:
-        return jsonify({'error': 'Cần cung cấp CV text và JD text'}), 400
+        return jsonify({'error': 'CV text and JD text are required'}), 400
 
-    print(f"\n[API] Phân tích CV: {cv_id or 'Upload CV'} × JD: {jd_id or 'Custom JD'} (Mode: {mode})")
+    print(f"\n[API] Analyzing CV: {cv_id or 'Uploaded CV'} × JD: {jd_id or 'Custom JD'} (Mode: {mode})")
 
     try:
         result = analyze_cv_jd(cv_text, jd_text, mode=mode)
@@ -171,7 +171,7 @@ def compare_modes_endpoint():
         cv_text = SAMPLE_CV['data']['raw_text']
 
     if not cv_text or not jd_text:
-        return jsonify({'error': 'Cần cung cấp CV text và JD text'}), 400
+        return jsonify({'error': 'CV text and JD text are required'}), 400
 
     try:
         results = compare_modes(cv_text, jd_text)
@@ -192,7 +192,7 @@ def batch_analyze():
         cv_text = SAMPLE_CV['data']['raw_text']
 
     if not cv_text:
-        return jsonify({'error': 'Cần cung cấp CV text'}), 400
+        return jsonify({'error': 'CV text is required'}), 400
 
     results = []
     for jd_id in jd_ids:
@@ -246,11 +246,11 @@ def batch_analyze():
 def upload_cv():
     """Upload CV PDF."""
     if 'file' not in request.files:
-        return jsonify({'error': 'Không tìm thấy file'}), 400
+        return jsonify({'error': 'No file found'}), 400
 
     file = request.files['file']
     if not file.filename.lower().endswith('.pdf'):
-        return jsonify({'error': 'Chỉ chấp nhận file PDF'}), 400
+        return jsonify({'error': 'Only PDF files are accepted'}), 400
 
     filepath = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(filepath)
@@ -272,11 +272,11 @@ def upload_cv():
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("  PAVN ATS - Hệ Thống Đối Sánh CV Thông Minh")
+    print("  PAVN ATS - Intelligent CV Matching System")
     print("  http://localhost:5000")
     print("=" * 60)
-    print(f"  📄 CV mẫu: {SAMPLE_CV['filename'] if SAMPLE_CV else 'Không có'}")
-    print(f"  📋 JD mẫu: {len(SAMPLE_JDS)} file(s)")
+    print(f"  📄 Sample CV: {SAMPLE_CV['filename'] if SAMPLE_CV else 'None'}")
+    print(f"  📋 Sample JDs: {len(SAMPLE_JDS)} file(s)")
     for jd in SAMPLE_JDS:
         print(f"     - {jd['name']}")
     print("=" * 60)

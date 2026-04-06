@@ -1,7 +1,7 @@
 """PAVN ATS - Analyzer Module v4
 Domain-Agnostic Hybrid Semantic + AI Engine
 
-Layer 1: Semantic Embedding (multilingual-e5-large) + Keyword Extraction
+Layer 1: Semantic Embedding + Keyword Extraction
   - True semantic similarity (không chỉ keyword match)
   - Hỗ trợ 100+ ngôn ngữ (Việt, Anh, Hàn, Nhật, Trung...)
   - Section-level Late Fusion (skills↔skills, exp↔exp)
@@ -17,6 +17,7 @@ import os
 import json
 import hashlib
 import time
+import random
 from collections import Counter
 import requests
 import numpy as np
@@ -25,15 +26,45 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ============================================================
-# AUTO-DETECT AI PROVIDER từ API key trong .env
+# AI PROVIDER CONFIGURATION
+# Reads ghp_ keys from keyfull.txt for GitHub Models (DeepSeek)
+# Supports: ghp_ (GitHub), sk-or-v1- (OpenRouter), AIzaSy (Gemini)
 # ============================================================
 ENABLE_AI = os.getenv('ENABLE_AI', 'YES').strip().upper() == 'YES'
-API_KEY = os.getenv('API_KEY') or os.getenv('OPENROUTER_API_KEY') or os.getenv('GEMINI_API_KEY') or ''
+
+# Path to keyfull.txt containing API keys
+KEYFULL_PATH = os.getenv(
+    'KEYFULL_PATH',
+    r'C:\Users\Admin\Desktop\Gpm_Sript\Testnet_Trading_BTC\Bybit_testnet\keyfull.txt'
+)
+
+def _load_ghp_keys() -> list:
+    """Load all ghp_ keys from keyfull.txt."""
+    keys = []
+    try:
+        with open(KEYFULL_PATH, 'r', encoding='utf-8') as f:
+            for line in f:
+                parts = line.strip().split('|')
+                for part in parts:
+                    part = part.strip()
+                    if part.startswith('ghp_'):
+                        keys.append(part)
+    except FileNotFoundError:
+        print(f"[AI Config] keyfull.txt not found at {KEYFULL_PATH}")
+    return keys
+
+# Load all available ghp_ keys
+GHP_KEYS = _load_ghp_keys() if ENABLE_AI else []
+
+# Fallback: also check .env API_KEY
+API_KEY = os.getenv('API_KEY', '').strip()
 
 def _detect_provider():
-    """Auto-detect AI provider from API key prefix."""
+    """Auto-detect AI provider. Priority: ghp_ keys from file > .env API_KEY."""
     if not ENABLE_AI:
         return None, None
+    if GHP_KEYS:
+        return 'github', 'DeepSeek-R1-0528'
     if API_KEY.startswith('sk-or-v1-'):
         return 'openrouter', 'stepfun/step-3.5-flash:free'
     elif API_KEY.startswith('ghp_'):
@@ -44,11 +75,18 @@ def _detect_provider():
         return 'unknown', 'unknown'
     return None, None
 
+def _get_api_key() -> str:
+    """Get an API key. For GitHub, pick a random ghp_ key from pool."""
+    if GHP_KEYS:
+        return random.choice(GHP_KEYS)
+    return API_KEY
+
 AI_PROVIDER, AI_MODEL = _detect_provider()
 if ENABLE_AI:
-    print(f"[AI Config] Provider: {AI_PROVIDER or 'None'} | Model: {AI_MODEL or 'No key'}")
+    key_count = len(GHP_KEYS) if GHP_KEYS else (1 if API_KEY else 0)
+    print(f"[AI Config] Provider: {AI_PROVIDER or 'None'} | Model: {AI_MODEL or 'No key'} | Keys: {key_count}")
 else:
-    print("[AI Config] AI is DISABLED globally (chỉ chạy local).")
+    print("[AI Config] AI is DISABLED (local ML only).")
 
 # ============================================================
 # SEMANTIC EMBEDDING MODEL — multilingual-e5-large
@@ -64,9 +102,18 @@ def _get_embedding_model():
         return _embedding_model
     try:
         from sentence_transformers import SentenceTransformer
-        print("[Embedding] Loading multilingual-e5-large... (lần đầu cần tải ~1.1GB)")
+        print("[Embedding] Loading multilingual-e5-large...")
         start = time.time()
-        _embedding_model = SentenceTransformer('intfloat/multilingual-e5-large')
+        try:
+            # Ưu tiên đọc từ cache local (nhanh, không cần Internet)
+            _embedding_model = SentenceTransformer(
+                'intfloat/multilingual-e5-large',
+                local_files_only=True
+            )
+        except Exception:
+            # Lần đầu tiên chưa có cache → tải về (~1.1GB)
+            print("[Embedding] Cache chưa có, đang tải từ HuggingFace Hub (~1.1GB)...")
+            _embedding_model = SentenceTransformer('intfloat/multilingual-e5-large')
         elapsed = time.time() - start
         print(f"[Embedding] Model loaded in {elapsed:.1f}s ✔")
         _embedding_ready = True
@@ -752,8 +799,8 @@ class AIAnalyzer:
     """
 
     def __init__(self):
-        if not API_KEY:
-            raise ValueError("API_KEY chưa được cấu hình trong .env")
+        if not API_KEY and not GHP_KEYS:
+            raise ValueError("No API key configured. Check .env or keyfull.txt")
         self.provider = AI_PROVIDER
         self.model = AI_MODEL
 
@@ -763,11 +810,8 @@ class AIAnalyzer:
         return self._parse_response(response)
 
     def _build_prompt(self, cv_text: str, jd_text: str, local_results: dict) -> str:
-        has_vi = bool(re.search(
-            r'[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]',
-            jd_text
-        ))
-        lang = "Vietnamese" if has_vi else "English"
+        # Always respond in English for international presentation
+        lang = "English"
         is_it = local_results.get('is_it_job', True)
         local_score = local_results.get('local_score', 50)
 
@@ -806,7 +850,7 @@ Provide your analysis as a JSON object with this EXACT structure:
         "language": <number 0-100>,
         "culture_fit": <number 0-100>
     }},
-    "match_level": "<Cao/Trung bình/Thấp OR High/Medium/Low>",
+    "match_level": "<High/Medium/Low>",
     "summary": "<2-3 sentence overall assessment>",
     "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
     "weaknesses": ["<weakness 1>", "<weakness 2>"],
@@ -831,42 +875,88 @@ Provide your analysis as a JSON object with this EXACT structure:
 }}"""
 
     def _call_api(self, prompt: str) -> str:
-        """Route to correct provider."""
-        if self.provider in ['github', 'openrouter']:
-            url = 'https://models.inference.ai.azure.com/chat/completions' if self.provider == 'github' else 'https://openrouter.ai/api/v1/chat/completions'
-            
-            headers = {
-                "Authorization": f"Bearer {API_KEY}",
-                "Content-Type": "application/json"
-            }
-            if self.provider == 'openrouter':
-                headers["HTTP-Referer"] = "http://localhost:5000"
-                headers["X-Title"] = "PAVN ATS"
-
-            print(f"[{self.model}] Calling {self.provider.capitalize()} API...")
-            
-            resp = requests.post(
-                url,
-                headers=headers,
-                json={
-                    "model": self.model,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.2
-                },
-                timeout=60
-            )
-
-            print(f"[{self.model}] Response status: {resp.status_code}")
-            if resp.status_code != 200:
-                raise Exception(f"API error {resp.status_code}: {resp.text}")
-            
-            content = resp.json()['choices'][0]['message']['content']
-            return re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
-
+        """Route to correct provider with retry logic for GitHub keys."""
+        if self.provider == 'github' and GHP_KEYS:
+            return self._call_github_with_retry(prompt)
+        elif self.provider == 'openrouter':
+            return self._call_openrouter(prompt)
         elif self.provider == 'gemini':
             return self._call_gemini(prompt)
         else:
             raise Exception(f"Unknown AI provider: {self.provider}")
+
+    def _call_github_with_retry(self, prompt: str, max_retries: int = 3) -> str:
+        """Try random ghp_ keys up to max_retries times."""
+        available_keys = list(GHP_KEYS)  # copy
+        random.shuffle(available_keys)
+        keys_to_try = available_keys[:max_retries]
+
+        last_error = None
+        for attempt, key in enumerate(keys_to_try, 1):
+            try:
+                key_preview = key[:8] + '...' + key[-4:]
+                print(f"[GitHub] Attempt {attempt}/{max_retries} with key {key_preview}")
+                return self._call_github_single(prompt, key)
+            except RateLimitError as e:
+                print(f"[GitHub] Key {key_preview} rate limited, trying next...")
+                last_error = e
+            except Exception as e:
+                print(f"[GitHub] Key {key_preview} failed: {e}")
+                last_error = e
+
+        print(f"[GitHub] All {max_retries} keys failed. Falling back to local-only.")
+        raise last_error or Exception("All GitHub API keys exhausted")
+
+    def _call_github_single(self, prompt: str, api_key: str) -> str:
+        """Call GitHub Models API with a specific key."""
+        url = 'https://models.inference.ai.azure.com/chat/completions'
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        resp = requests.post(
+            url,
+            headers=headers,
+            json={
+                "model": self.model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.2
+            },
+            timeout=60
+        )
+        print(f"[{self.model}] Response status: {resp.status_code}")
+        if resp.status_code == 429:
+            raise RateLimitError("GitHub Models Rate Limit")
+        if resp.status_code != 200:
+            raise Exception(f"API error {resp.status_code}: {resp.text[:300]}")
+        content = resp.json()['choices'][0]['message']['content']
+        return re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+
+    def _call_openrouter(self, prompt: str) -> str:
+        """Call OpenRouter API."""
+        url = 'https://openrouter.ai/api/v1/chat/completions'
+        headers = {
+            "Authorization": f"Bearer {_get_api_key()}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "http://localhost:5000",
+            "X-Title": "PAVN ATS"
+        }
+        resp = requests.post(
+            url,
+            headers=headers,
+            json={
+                "model": self.model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.2
+            },
+            timeout=60
+        )
+        if resp.status_code == 429:
+            raise RateLimitError("OpenRouter Rate Limit")
+        if resp.status_code != 200:
+            raise Exception(f"API error {resp.status_code}: {resp.text[:300]}")
+        content = resp.json()['choices'][0]['message']['content']
+        return re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
 
     # ---- GitHub Models (DeepSeek-R1-0528) ----
     def _call_github(self, prompt: str) -> str:
@@ -897,7 +987,7 @@ Provide your analysis as a JSON object with this EXACT structure:
             data = response.json()
             choices = data.get('choices', [])
             if not choices:
-                raise Exception("GitHub Models trả về response rỗng")
+                raise Exception("GitHub Models returned empty response")
 
             content = choices[0].get('message', {}).get('content', '')
 
@@ -919,7 +1009,7 @@ Provide your analysis as a JSON object with this EXACT structure:
         except RateLimitError:
             raise
         except requests.exceptions.ConnectionError:
-            raise Exception("Không thể kết nối GitHub Models API.")
+            raise Exception("Cannot connect to GitHub Models API.")
 
     # ---- Google Gemini ----
     def _call_gemini(self, prompt: str) -> str:
@@ -1158,20 +1248,16 @@ class HybridAnalyzer:
         scores['overall'] = round(overall, 1)
 
         if scores['overall'] >= 75:
-            scores['match_level'] = 'Cao'
-            scores['match_level_en'] = 'High'
+            scores['match_level'] = 'High'
             scores['color'] = '#22c55e'
         elif scores['overall'] >= 50:
-            scores['match_level'] = 'Trung bình'
-            scores['match_level_en'] = 'Medium'
+            scores['match_level'] = 'Medium'
             scores['color'] = '#f59e0b'
         elif scores['overall'] >= 25:
-            scores['match_level'] = 'Thấp'
-            scores['match_level_en'] = 'Low'
+            scores['match_level'] = 'Low'
             scores['color'] = '#ef4444'
         else:
-            scores['match_level'] = 'Rất thấp'
-            scores['match_level_en'] = 'Very Low'
+            scores['match_level'] = 'Very Low'
             scores['color'] = '#dc2626'
 
         scores['is_it_job'] = local.get('is_it_job', False)

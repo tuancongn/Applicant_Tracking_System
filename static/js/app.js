@@ -55,7 +55,7 @@ function renderCvTabs(cvs) {
         <button class="jd-tab cv-tab-btn ${i === 0 ? 'active' : ''}" data-cv-id="${cv.filename}" onclick="selectCv(this, '${cv.filename}')">
             <span class="jd-tab-radio"></span>
             <span class="jd-tab-name">${cv.filename.replace('.pdf', '')}</span>
-            ${cv.error ? '<span style="color:red; font-size:12px; margin-left: 5px;">(Lỗi)</span>' : ''}
+            ${cv.error ? '<span style="color:red; font-size:12px; margin-left: 5px;">(Error)</span>' : ''}
         </button>
     `).join('');
 
@@ -86,10 +86,10 @@ function showCvInfo(cv) {
     if (cv && cv.filename) {
         cvFilename.textContent = cv.filename;
         const metaParts = [];
-        if (cv.metadata?.language) metaParts.push(`Ngôn ngữ: ${cv.metadata.language === 'vi' ? 'Tiếng Việt' : 'English'}`);
+        if (cv.metadata?.language) metaParts.push(`Language: ${cv.metadata.language === 'vi' ? 'Vietnamese' : 'English'}`);
         if (cv.metadata?.email) metaParts.push(cv.metadata.email);
-        if (cv.word_count) metaParts.push(`${cv.word_count} từ`);
-        if (cv.metadata?.pages) metaParts.push(`${cv.metadata.pages} trang`);
+        if (cv.word_count) metaParts.push(`${cv.word_count} words`);
+        if (cv.metadata?.pages) metaParts.push(`${cv.metadata.pages} page(s)`);
         cvMeta.textContent = metaParts.join(' • ');
         
         // Hide standard tabs, show uploaded info
@@ -178,9 +178,9 @@ async function uploadFile(file) {
 
         document.getElementById('cvFilename').textContent = data.filename;
         const metaParts = [];
-        if (data.data.metadata?.language) metaParts.push(`Ngôn ngữ: ${data.data.metadata.language === 'vi' ? 'Tiếng Việt' : 'English'}`);
+        if (data.data.metadata?.language) metaParts.push(`Language: ${data.data.metadata.language === 'vi' ? 'Vietnamese' : 'English'}`);
         if (data.data.metadata?.email) metaParts.push(data.data.metadata.email);
-        if (data.data.word_count) metaParts.push(`${data.data.word_count} từ`);
+        if (data.data.word_count) metaParts.push(`${data.data.word_count} words`);
         document.getElementById('cvMeta').textContent = metaParts.join(' • ');
         
         // Hide sample tabs
@@ -190,7 +190,7 @@ async function uploadFile(file) {
         document.getElementById('cvInfo').style.display = 'block';
         document.getElementById('uploadArea').style.display = 'none';
     } catch (err) {
-        alert('Lỗi upload: ' + err.message);
+        alert('Upload error: ' + err.message);
     }
 }
 
@@ -200,7 +200,7 @@ async function analyzeSingle() {
     const jdId = state.selectedJdId;
 
     if (!customJd && !jdId) {
-        alert('Vui lòng chọn một JD hoặc dán mô tả công việc!');
+        alert('Please select a JD or paste a job description!');
         return;
     }
 
@@ -230,25 +230,25 @@ async function analyzeSingle() {
         const data = await res.json();
 
         if (res.status === 429 || data.rate_limited) {
-            showError('Lỗi Rate Limit', data.error || 'Đã vượt quá giới hạn request miễn phí. Vui lòng đợi vài phút.');
+            showError('Rate Limit Error', data.error || 'Free request limit exceeded. Please wait a few minutes.');
             return;
         }
 
         if (data.error && !data.final_scores) {
-            showError('Lỗi phân tích', data.error);
+            showError('Analysis Error', data.error);
             return;
         }
 
         state.currentResult = data;
         renderResults(data);
     } catch (err) {
-        showError('Lỗi kết nối', err.message);
+        showError('Connection Error', err.message);
     }
 }
 
 async function analyzeBatch() {
     if (state.jds.length === 0) {
-        alert('Không có JD mẫu để so sánh!');
+        alert('No sample JDs available for comparison!');
         return;
     }
 
@@ -272,13 +272,13 @@ async function analyzeBatch() {
         // Check for rate limit in any result
         const rateLimited = data.results?.find(r => r.rate_limited);
         if (rateLimited) {
-            showError('Lỗi Rate Limit', rateLimited.error || 'Đã vượt quá giới hạn request. Vui lòng đợi.');
+            showError('Rate Limit Error', rateLimited.error || 'Request limit exceeded. Please wait.');
             return;
         }
 
         renderBatchResults(data.results);
     } catch (err) {
-        showError('Lỗi kết nối', err.message);
+        showError('Connection Error', err.message);
     }
 }
 
@@ -358,7 +358,7 @@ function renderResults(data) {
     if (ai && ai.summary) {
         summaryEl.textContent = ai.summary;
     } else {
-        summaryEl.textContent = `Dựa trên phân tích ML, CV có mức độ phù hợp ${scores.match_level.toLowerCase()} với vị trí này. TF-IDF Similarity: ${local.tfidf_similarity}%`;
+        summaryEl.textContent = `Based on ML analysis, CV has a ${scores.match_level.toLowerCase()} match with this position. Semantic Similarity: ${local.tfidf_similarity}%`;
     }
 
     // Badges
@@ -395,12 +395,12 @@ function renderResults(data) {
 
 function renderDimensionScores(scores) {
     const dims = [
-        { key: 'hard_skills', name: 'Kỹ Năng Kỹ Thuật', icon: '💻', weight: '30%' },
-        { key: 'experience', name: 'Kinh Nghiệm', icon: '📋', weight: '25%' },
-        { key: 'education', name: 'Học Vấn', icon: '🎓', weight: '15%' },
-        { key: 'language', name: 'Ngoại Ngữ', icon: '🌐', weight: '10%' },
-        { key: 'soft_skills', name: 'Kỹ Năng Mềm', icon: '🤝', weight: '10%' },
-        { key: 'culture_fit', name: 'Văn Hóa Phù Hợp', icon: '🏢', weight: '10%' },
+        { key: 'hard_skills', name: 'Technical Skills', icon: '💻', weight: '30%' },
+        { key: 'experience', name: 'Experience', icon: '📋', weight: '25%' },
+        { key: 'education', name: 'Education', icon: '🎓', weight: '15%' },
+        { key: 'language', name: 'Language', icon: '🌐', weight: '10%' },
+        { key: 'soft_skills', name: 'Soft Skills', icon: '🤝', weight: '10%' },
+        { key: 'culture_fit', name: 'Culture Fit', icon: '🏢', weight: '10%' },
     ];
 
     const container = document.getElementById('dimensionScores');
@@ -435,7 +435,7 @@ function renderRadarChart(scores) {
         radarChartInstance.destroy();
     }
 
-    const labels = ['Kỹ Năng KT', 'Kinh Nghiệm', 'Học Vấn', 'Ngoại Ngữ', 'Kỹ Năng Mềm', 'Văn Hóa'];
+    const labels = ['Hard Skills', 'Experience', 'Education', 'Language', 'Soft Skills', 'Culture Fit'];
     const values = [
         scores.hard_skills || 0,
         scores.experience || 0,
@@ -450,7 +450,7 @@ function renderRadarChart(scores) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Mức độ phù hợp (%)',
+                label: 'Match Level (%)',
                 data: values,
                 backgroundColor: 'rgba(99, 102, 241, 0.15)',
                 borderColor: 'rgba(99, 102, 241, 0.8)',
@@ -506,7 +506,7 @@ function renderSkillsGap(local, ai) {
     if (local.hard_skills.matched.length > 0) {
         html += `
             <div class="skill-group">
-                <div class="skill-group-title">✅ Kỹ năng phù hợp (${local.hard_skills.matched.length})</div>
+                <div class="skill-group-title">✅ Matched Skills (${local.hard_skills.matched.length})</div>
                 <div class="skill-tags">
                     ${local.hard_skills.matched.map(s => `<span class="skill-tag skill-tag-matched">${s}</span>`).join('')}
                 </div>
@@ -518,7 +518,7 @@ function renderSkillsGap(local, ai) {
     if (local.hard_skills.missing.length > 0) {
         html += `
             <div class="skill-group">
-                <div class="skill-group-title">❌ Kỹ năng thiếu (${local.hard_skills.missing.length})</div>
+                <div class="skill-group-title">❌ Missing Skills (${local.hard_skills.missing.length})</div>
                 <div class="skill-tags">
                     ${local.hard_skills.missing.map(s => `<span class="skill-tag skill-tag-missing">${s}</span>`).join('')}
                 </div>
@@ -530,7 +530,7 @@ function renderSkillsGap(local, ai) {
     if (local.hard_skills.extra_in_cv.length > 0) {
         html += `
             <div class="skill-group">
-                <div class="skill-group-title">🔵 Kỹ năng thêm trong CV (${local.hard_skills.extra_in_cv.length})</div>
+                <div class="skill-group-title">🔵 Additional Skills in CV (${local.hard_skills.extra_in_cv.length})</div>
                 <div class="skill-tags">
                     ${local.hard_skills.extra_in_cv.map(s => `<span class="skill-tag skill-tag-extra">${s}</span>`).join('')}
                 </div>
@@ -542,7 +542,7 @@ function renderSkillsGap(local, ai) {
     if (ai && ai.missing_skills && ai.missing_skills.length > 0) {
         html += `
             <div class="skill-group" style="grid-column: 1 / -1;">
-                <div class="skill-group-title">🎯 Phân tích chi tiết từ AI</div>
+                <div class="skill-group-title">🎯 Detailed AI Analysis</div>
                 ${ai.missing_skills.map(s => `
                     <div class="missing-skill-item">
                         <span class="skill-priority priority-${getPriorityClass(s.priority)}">${s.priority}</span>
@@ -562,13 +562,13 @@ function renderSkillsGap(local, ai) {
             <div class="skill-group" style="grid-column: 1 / -1;">
                 <div class="sw-grid">
                     <div>
-                        <div class="sw-title">💪 Điểm mạnh</div>
+                        <div class="sw-title">💪 Strengths</div>
                         <ul class="sw-list">
                             ${(ai.strengths || []).map(s => `<li><span style="color: var(--success)">✓</span> ${s}</li>`).join('')}
                         </ul>
                     </div>
                     <div>
-                        <div class="sw-title">⚠️ Điểm cần cải thiện</div>
+                        <div class="sw-title">⚠️ Areas for Improvement</div>
                         <ul class="sw-list">
                             ${(ai.weaknesses || []).map(w => `<li><span style="color: var(--warning)">●</span> ${w}</li>`).join('')}
                         </ul>
@@ -583,10 +583,10 @@ function renderSkillsGap(local, ai) {
         const ko = ai.keyword_optimization;
         html += `
             <div class="skill-group keyword-section" style="grid-column: 1 / -1;">
-                <div class="keyword-title">🔑 Tối ưu từ khóa cho ATS</div>
+                <div class="keyword-title">🔑 ATS Keyword Optimization</div>
                 ${ko.missing_keywords && ko.missing_keywords.length > 0 ? `
                     <div style="margin-bottom: 10px;">
-                        <span style="font-size: 0.82rem; color: var(--text-secondary);">Từ khóa cần bổ sung:</span>
+                        <span style="font-size: 0.82rem; color: var(--text-secondary);">Missing Keywords:</span>
                         <div class="skill-tags" style="margin-top: 6px;">
                             ${ko.missing_keywords.map(k => `<span class="skill-tag skill-tag-missing">${k}</span>`).join('')}
                         </div>
@@ -594,7 +594,7 @@ function renderSkillsGap(local, ai) {
                 ` : ''}
                 ${ko.suggested_additions && ko.suggested_additions.length > 0 ? `
                     <div>
-                        <span style="font-size: 0.82rem; color: var(--text-secondary);">Cụm từ nên thêm vào CV:</span>
+                        <span style="font-size: 0.82rem; color: var(--text-secondary);">Suggested Phrases to Add:</span>
                         <ul class="sw-list" style="margin-top: 6px;">
                             ${ko.suggested_additions.map(s => `<li><span style="color: var(--accent-tertiary)">+</span> ${s}</li>`).join('')}
                         </ul>
@@ -619,7 +619,7 @@ function renderAISuggestions(ai) {
             <div class="suggestion-section">📝 ${s.section || 'General'}</div>
             ${s.current_issue ? `<div class="suggestion-issue">⚠️ ${s.current_issue}</div>` : ''}
             <div class="suggestion-text">💡 ${s.suggestion}</div>
-            ${s.example ? `<div class="suggestion-example">✍️ Ví dụ: "${s.example}"</div>` : ''}
+            ${s.example ? `<div class="suggestion-example">✍️ Example: "${s.example}"</div>` : ''}
         </div>
     `).join('');
 
@@ -648,7 +648,7 @@ function renderATSCheck(ai) {
     if (ats.issues && ats.issues.length > 0) {
         html += `
             <div style="margin-bottom: 16px;">
-                <div class="sw-title">⚠️ Vấn đề cần khắc phục</div>
+                <div class="sw-title">⚠️ Issues to Fix</div>
                 <ul class="ats-list">
                     ${ats.issues.map(i => `<li><span style="color: var(--warning)">●</span> ${i}</li>`).join('')}
                 </ul>
@@ -659,7 +659,7 @@ function renderATSCheck(ai) {
     if (ats.tips && ats.tips.length > 0) {
         html += `
             <div>
-                <div class="sw-title">💡 Mẹo cải thiện</div>
+                <div class="sw-title">💡 Optimization Tips</div>
                 <ul class="ats-list">
                     ${ats.tips.map(t => `<li><span style="color: var(--success)">✓</span> ${t}</li>`).join('')}
                 </ul>
