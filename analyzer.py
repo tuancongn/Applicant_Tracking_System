@@ -2,14 +2,15 @@
 Domain-Agnostic Hybrid Semantic + AI Engine
 
 Layer 1: Semantic Embedding + Keyword Extraction
-  - True semantic similarity (không chỉ keyword match)
-  - Hỗ trợ 100+ ngôn ngữ (Việt, Anh, Hàn, Nhật, Trung...)
+  - True semantic similarity via multilingual-e5-large
+  - Supports 100+ languages (Vietnamese, English, Korean, Japanese, Chinese...)
   - Section-level Late Fusion (skills↔skills, exp↔exp)
-Layer 2: AI API — tự động chọn provider:
+Layer 2: AI API — auto-detects provider from API key:
   - ghp_* → GitHub Models (DeepSeek-R1-0528)
+  - sk-or-v1-* → OpenRouter
   - AIzaSy* → Google Gemini 2.5 Flash
 
-Hoạt động với BẤT KỲ NGÀNH NGHỀ NÀO - không chỉ IT.
+Works with ANY industry — not just IT.
 """
 
 import re
@@ -90,13 +91,13 @@ else:
 
 # ============================================================
 # SEMANTIC EMBEDDING MODEL — multilingual-e5-large
-# Lazy-loaded: chỉ tải model khi cần lần đầu tiên
+# Lazy-loaded: only loads model on first use
 # ============================================================
 _embedding_model = None
 _embedding_ready = False
 
 def _get_embedding_model():
-    """Lazy-load multilingual-e5-large (chỉ load 1 lần)."""
+    """Lazy-load multilingual-e5-large (loads once only)."""
     global _embedding_model, _embedding_ready
     if _embedding_ready:
         return _embedding_model
@@ -105,14 +106,14 @@ def _get_embedding_model():
         print("[Embedding] Loading multilingual-e5-large...")
         start = time.time()
         try:
-            # Ưu tiên đọc từ cache local (nhanh, không cần Internet)
+            # Prefer loading from local cache (fast, no Internet required)
             _embedding_model = SentenceTransformer(
                 'intfloat/multilingual-e5-large',
                 local_files_only=True
             )
         except Exception:
-            # Lần đầu tiên chưa có cache → tải về (~1.1GB)
-            print("[Embedding] Cache chưa có, đang tải từ HuggingFace Hub (~1.1GB)...")
+            # First run — no cache yet, downloading from HuggingFace Hub (~1.1GB)
+            print("[Embedding] No local cache, downloading from HuggingFace Hub (~1.1GB)...")
             _embedding_model = SentenceTransformer('intfloat/multilingual-e5-large')
         elapsed = time.time() - start
         print(f"[Embedding] Model loaded in {elapsed:.1f}s ✔")
@@ -143,19 +144,19 @@ def _compute_similarity(text_a: str, text_b: str) -> float:
 
 
 # ============================================================
-# RESULT CACHE — cùng input → cùng output (không gọi lại API)
+# RESULT CACHE — same input → same output (no redundant API calls)
 # ============================================================
 _result_cache = {}
 
 
 class RateLimitError(Exception):
-    """Lỗi khi bị rate limit từ Gemini API."""
+    """Error when rate limited by AI API."""
     pass
 
 
 # ============================================================
-# BILINGUAL MAP — cho cross-language matching
-# CV tiếng Anh + JD tiếng Việt (hoặc ngược lại) → vẫn match
+# BILINGUAL MAP — for cross-language matching
+# English CV + Vietnamese JD (or vice versa) → still matches
 # ============================================================
 BILINGUAL_MAP = {
     # Common job terms
@@ -431,7 +432,7 @@ class LocalAnalyzer:
             'local_score': round(local_score, 1),
             'is_it_job': self.is_it,
             'semantic_similarity': semantic_result,
-            'tfidf_similarity': semantic_score,  # backward-compat key
+            'semantic_score': semantic_score,
             'keyword_match': keyword_match,
             'ngram_overlap': ngram_score,
             'hard_skills': hard_skills,
@@ -443,21 +444,64 @@ class LocalAnalyzer:
         }
 
     def _extract_keywords(self, text: str, top_n: int = 50) -> list:
-        """Extract important keywords from text using word frequency analysis."""
-        # Extract words (including Vietnamese with diacritics)
-        words = re.findall(
-            r'\b[a-zA-Zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]{2,}\b',
-            text
-        )
+        """Extract important keywords from text using word frequency analysis.
+        Supports Vietnamese compound words via bigram extraction to prevent
+        false positive matches from individual syllables (e.g., 'giao', 'toàn').
 
-        # Filter stop words
-        filtered = [w for w in words if w not in ALL_STOP_WORDS and len(w) > 2]
+        Vietnamese is an isolating language where compound words are written
+        with spaces between syllables. This method extracts bigrams as primary
+        keywords for Vietnamese text, ensuring 'giao tiếp' (communication) and
+        'giao thông' (traffic) are treated as distinct keywords."""
+        # Extract all words (including Vietnamese with diacritics)
+        word_pattern = r'\b[a-zA-Zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]{2,}\b'
+        all_words = re.findall(word_pattern, text)
 
-        # Count frequency
-        word_freq = Counter(filtered)
+        # Filter stop words for single-word analysis
+        filtered = [w for w in all_words if w not in ALL_STOP_WORDS and len(w) > 2]
 
-        # Return top keywords
-        return [word for word, _ in word_freq.most_common(top_n)]
+        # Detect significant Vietnamese content (≥3 words with diacritics)
+        vi_diacritics = set('àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ')
+        vi_count = sum(1 for w in all_words if any(c in vi_diacritics for c in w))
+
+        if vi_count >= 3:
+            # Vietnamese: extract bigrams as compound words
+            # Bigrams are extracted from raw word list (preserving true adjacency)
+            bigrams = []
+            for i in range(len(all_words) - 1):
+                w1, w2 = all_words[i], all_words[i + 1]
+                if (w1 not in ALL_STOP_WORDS and w2 not in ALL_STOP_WORDS
+                        and len(w1) > 1 and len(w2) > 1):
+                    bigrams.append(f"{w1} {w2}")
+
+            bigram_freq = Counter(bigrams)
+            word_freq = Counter(filtered)
+
+            # Track short Vietnamese syllables (≤4 chars with diacritics)
+            # that appear in frequent bigrams — these are compound word parts
+            syllables_covered = set()
+            for bg, _ in bigram_freq.most_common(30):
+                for part in bg.split():
+                    if any(c in vi_diacritics for c in part) and len(part) <= 4:
+                        syllables_covered.add(part)
+
+            # Build combined keyword list
+            keywords = []
+            # Priority 1: Vietnamese compound words (bigrams)
+            for bg, _ in bigram_freq.most_common(25):
+                keywords.append(bg)
+            # Priority 2: single words NOT already covered as syllables
+            for w, _ in word_freq.most_common(top_n):
+                if w in syllables_covered:
+                    continue  # Skip: VN syllable already captured by bigram
+                keywords.append(w)
+
+            # Deduplicate preserving order
+            seen = set()
+            return [k for k in keywords if not (k in seen or seen.add(k))][:top_n]
+        else:
+            # Non-Vietnamese text: standard single-word extraction
+            word_freq = Counter(filtered)
+            return [word for word, _ in word_freq.most_common(top_n)]
 
     def _match_keywords(self, jd_keywords: list, cv_keywords: list) -> dict:
         """Match dynamically extracted keywords — works for ANY domain."""
@@ -489,11 +533,12 @@ class LocalAnalyzer:
         overall_sim = _compute_similarity(self.cv_original, self.jd_original)
 
         if overall_sim < 0:
-            # Fallback to TF-IDF if embedding model not available
-            tfidf = self._tfidf_fallback()
+            # Embedding model not available — return 0 with clear signal
+            # (no TF-IDF fallback: it produces inaccurate results)
+            print("[Embedding] Model unavailable. Install sentence-transformers and ensure multilingual-e5-large is cached.")
             return {
-                'overall': tfidf,
-                'method': 'tfidf_fallback',
+                'overall': 0.0,
+                'method': 'model_unavailable',
                 'sections': {},
             }
 
@@ -573,24 +618,6 @@ class LocalAnalyzer:
                 break
 
         return sections
-
-    def _tfidf_fallback(self) -> float:
-        """TF-IDF fallback when embedding model is unavailable."""
-        try:
-            from sklearn.feature_extraction.text import TfidfVectorizer
-            from sklearn.metrics.pairwise import cosine_similarity
-
-            vectorizer = TfidfVectorizer(
-                max_features=5000, stop_words='english',
-                ngram_range=(1, 2), sublinear_tf=True, norm='l2',
-            )
-            tfidf_matrix = vectorizer.fit_transform(
-                [self.cv_normalized, self.jd_normalized]
-            )
-            sim = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-            return round(min(sim * 285, 100), 1)
-        except Exception:
-            return 0.0
 
     def _ngram_overlap(self, n: int = 2) -> float:
         """Calculate bi-gram overlap ratio."""
@@ -705,14 +732,14 @@ class LocalAnalyzer:
             score = 30.0
 
         # DOMAIN PENALTY for Experience:
-        # Nếu kinh nghiệm nhiều nhưng trái ngành (semantic_score thấp) thì vô giá trị
-        # Ngưỡng phạt được hiệu chuẩn cho cross-language matching
+        # If high experience but wrong domain (low semantic_score), it's worthless
+        # Penalty thresholds calibrated for cross-language matching
         if semantic_score < 25.0:
-            score *= 0.1  # Phạt 90%: hoàn toàn trái ngành (Tài xế ↔ IT)
+            score *= 0.1  # 90% penalty: completely wrong field (Driver ↔ IT)
         elif semantic_score < 40.0:
-            score *= 0.4  # Phạt 60%: ngành khác khá nhiều
+            score *= 0.4  # 60% penalty: significantly different field
         elif semantic_score < 55.0:
-            score *= 0.7  # Phạt 30%: có liên quan nhưng không đúng chuyên môn sâu
+            score *= 0.7  # 30% penalty: related but not exact domain match
 
 
         return {
@@ -724,7 +751,7 @@ class LocalAnalyzer:
     def _match_education(self) -> dict:
         """Match education level (bilingual)."""
         jd_level, cv_level = 0, 0
-        jd_edu_name, cv_edu_name = 'Không rõ', 'Không rõ'
+        jd_edu_name, cv_edu_name = 'Unknown', 'Unknown'
 
         for kw, level in EDUCATION_LEVELS.items():
             if kw in self.jd_text:
@@ -788,7 +815,7 @@ class LocalAnalyzer:
 
 # ============================================================
 # AI ANALYZER — Multi-provider (Gemini + DeepSeek)
-# Auto-detect provider từ API key prefix
+# Auto-detect provider from API key prefix
 # ============================================================
 class AIAnalyzer:
     """
@@ -1226,6 +1253,33 @@ class HybridAnalyzer:
             'language': local['language_match']['score'],
             'culture_fit': 30.0,
         }
+
+        # Domain relevance factor based on semantic similarity
+        # When semantic similarity is very low (completely unrelated domains like Driver<->IT),
+        # penalize Experience, Soft Skills, and Culture Fit — because they're measuring
+        # the WRONG domain's experience/skills.
+        semantic_score = local.get('semantic_similarity', {}).get('overall', 50.0)
+        # NOTE: multilingual-e5-large gives high baseline cosine for same-language texts
+        # even when domains are completely unrelated (e.g., Vietnamese IT CV vs Vietnamese driver JD
+        # gets ~0.79 cosine → ~56% scaled). Thresholds must account for this.
+        if semantic_score < 40.0:
+            # Completely unrelated domains (e.g., IT CV ↔ Chef JD in different languages)
+            domain_factor = 0.10  # 90% penalty
+        elif semantic_score < 55.0:
+            domain_factor = 0.30  # 70% penalty
+        elif semantic_score < 65.0:
+            # Same language but different domain (IT CV ↔ Driver JD, both Vietnamese)
+            domain_factor = 0.50  # 50% penalty
+        else:
+            domain_factor = 1.0  # No penalty — domains are genuinely related
+
+        # Apply domain penalty to context-dependent dimensions
+        # Hard skills and education/language are already correctly evaluated
+        # But Experience and Soft Skills need domain context
+        if domain_factor < 1.0:
+            local_dims['experience'] = round(local_dims['experience'] * domain_factor, 1)
+            local_dims['soft_skills'] = round(local_dims['soft_skills'] * domain_factor, 1)
+            local_dims['culture_fit'] = round(local_dims['culture_fit'] * domain_factor, 1)
 
         if mode == 'local' or not ai or 'dimension_scores' not in ai:
             # Pure local scores

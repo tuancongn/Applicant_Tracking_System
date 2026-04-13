@@ -1,6 +1,6 @@
 """
-CV Parser Module - Trích xuất văn bản từ CV PDF
-Hỗ trợ cả CV tiếng Anh và tiếng Việt
+CV Parser Module — Extract structured text from CV PDFs
+Supports both English and Vietnamese CVs with bilingual section detection
 """
 
 import pdfplumber
@@ -9,9 +9,9 @@ import os
 
 
 class CVParser:
-    """Parse CV từ file PDF, trích xuất text có cấu trúc."""
+    """Parse a CV from PDF file, extract structured text and metadata."""
 
-    # Patterns phổ biến cho các section trong CV (Anh + Việt)
+    # Common section header patterns (English + Vietnamese bilingual)
     SECTION_PATTERNS = {
         'contact': r'(?i)(contact|liên\s*hệ|thông\s*tin\s*(cá\s*nhân|liên\s*hệ)|personal\s*info)',
         'summary': r'(?i)(summary|objective|giới\s*thiệu|mục\s*tiêu|tóm\s*tắt|profile|about\s*me)',
@@ -33,7 +33,7 @@ class CVParser:
         self.metadata = {}
 
     def parse(self) -> dict:
-        """Parse PDF và trả về structured data."""
+        """Parse PDF and return structured data."""
         self._extract_text()
         self._detect_language()
         self._extract_sections()
@@ -41,9 +41,9 @@ class CVParser:
         return self.get_result()
 
     def _extract_text(self):
-        """Trích xuất toàn bộ text từ PDF."""
+        """Extract all text content from PDF."""
         if not os.path.exists(self.pdf_path):
-            raise FileNotFoundError(f"Không tìm thấy file: {self.pdf_path}")
+            raise FileNotFoundError(f"File not found: {self.pdf_path}")
 
         text_parts = []
         with pdfplumber.open(self.pdf_path) as pdf:
@@ -55,10 +55,10 @@ class CVParser:
 
         self.raw_text = "\n".join(text_parts)
         if not self.raw_text.strip():
-            raise ValueError("Không thể trích xuất text từ PDF. File có thể là ảnh scan.")
+            raise ValueError("Cannot extract text from PDF. File may be a scanned image.")
 
     def _detect_language(self):
-        """Nhận diện ngôn ngữ chính của CV."""
+        """Detect the primary language of the CV."""
         vietnamese_chars = len(re.findall(r'[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]',
                                           self.raw_text.lower()))
         total_chars = len(self.raw_text)
@@ -67,7 +67,7 @@ class CVParser:
         self.metadata['vietnamese_char_ratio'] = round(ratio, 4)
 
     def _extract_sections(self):
-        """Phân tích và tách các section trong CV."""
+        """Parse and split CV into logical sections."""
         lines = self.raw_text.split('\n')
         current_section = 'header'
         self.sections = {'header': []}
@@ -77,11 +77,11 @@ class CVParser:
             if not line_stripped:
                 continue
 
-            # Kiểm tra xem dòng này có phải tiêu đề section không
+            # Check if this line is a section header
             matched_section = None
             for section_name, pattern in self.SECTION_PATTERNS.items():
                 if re.search(pattern, line_stripped):
-                    # Dòng ngắn (< 80 ký tự) và match pattern → tiêu đề section
+                    # Short line (<80 chars) matching pattern → section header
                     if len(line_stripped) < 80:
                         matched_section = section_name
                         break
@@ -96,7 +96,7 @@ class CVParser:
                 self.sections[current_section].append(line_stripped)
 
     def _extract_metadata(self):
-        """Trích xuất metadata từ CV (email, phone, name...)."""
+        """Extract metadata from CV (email, phone, name, etc.)."""
         text = self.raw_text
 
         # Email
@@ -119,7 +119,7 @@ class CVParser:
         if github:
             self.metadata['github'] = github[0]
 
-        # Trích xuất years of experience (tìm pattern "X năm" hoặc "X years")
+        # Extract years of experience (supports "X năm" and "X years" patterns)
         years_vi = re.findall(r'(\d+)\s*(?:năm|years?)\s*(?:kinh\s*nghiệm|experience)', text, re.IGNORECASE)
         years_en = re.findall(r'(\d+)\+?\s*years?\s*(?:of\s+)?experience', text, re.IGNORECASE)
         years = years_vi + years_en
@@ -127,7 +127,7 @@ class CVParser:
             self.metadata['years_experience'] = max(int(y) for y in years)
 
     def get_result(self) -> dict:
-        """Trả về kết quả parse dưới dạng dictionary."""
+        """Return parsed result as dictionary."""
         sections_text = {}
         for section, lines in self.sections.items():
             sections_text[section] = '\n'.join(lines)
@@ -141,13 +141,13 @@ class CVParser:
 
 
 def parse_cv(pdf_path: str) -> dict:
-    """Convenience function để parse CV."""
+    """Convenience function to parse a CV."""
     parser = CVParser(pdf_path)
     return parser.parse()
 
 
 if __name__ == '__main__':
-    # Test với CV mẫu
+    # Test with sample CV
     import json
     cv_path = os.path.join(os.path.dirname(__file__), 'Mau_1', 'CV_NGUYEN_CONG_LAP_NHAN_AI_ENGINEER_2.pdf')
     result = parse_cv(cv_path)

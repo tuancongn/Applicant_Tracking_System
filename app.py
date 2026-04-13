@@ -1,9 +1,11 @@
 """
 PAVN ATS - Flask API Server
-Hệ thống đối sánh CV thông minh
+Intelligent CV Matching System
 """
 
 import os
+import sys
+import io
 import json
 import glob
 from flask import Flask, request, jsonify, render_template, send_from_directory
@@ -21,7 +23,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 def load_sample_jds():
-    """Load các JD mẫu từ folder Mau_1."""
+    """Load sample JDs from Mau_1 folder."""
     jds = []
     jd_files = glob.glob(os.path.join(MAU_1_FOLDER, '*.txt'))
     for filepath in sorted(jd_files):
@@ -29,7 +31,7 @@ def load_sample_jds():
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        # Trích xuất tên công việc và công ty từ filename
+        # Extract job title from filename
         name = filename.replace('.txt', '')
 
         jds.append({
@@ -42,7 +44,7 @@ def load_sample_jds():
 
 
 def load_all_cvs():
-    """Load tất cả CV mẫu từ folder Mau_1."""
+    """Load all sample CVs from Mau_1 folder."""
     cvs = []
     pdf_files = sorted(glob.glob(os.path.join(MAU_1_FOLDER, '*.pdf')))
     for cv_path in pdf_files:
@@ -70,13 +72,13 @@ SAMPLE_CV = SAMPLE_CVS[0] if SAMPLE_CVS else None  # backward compat
 
 @app.route('/')
 def index():
-    """Trang chủ."""
+    """Home page."""
     return render_template('index.html')
 
 
 @app.route('/api/sample-data', methods=['GET'])
 def get_sample_data():
-    """Lấy dữ liệu mẫu (CVs + JDs)."""
+    """Get sample data (CVs + JDs)."""
     cv_list = []
     for cv in SAMPLE_CVS:
         if 'data' in cv:
@@ -103,7 +105,7 @@ def get_sample_data():
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
-    """Phân tích CV vs JD. Supports mode: local, ai, hybrid."""
+    """Analyze CV vs JD. Supports mode: local, ai, hybrid."""
     data = request.json
 
     cv_text = data.get('cv_text', '')
@@ -118,7 +120,7 @@ def analyze():
                 jd_text = jd['content']
                 break
 
-    # Chọn CV theo cv_id hoặc dùng mặc định
+    # Select CV by cv_id or use default
     if not cv_text:
         target_cv = SAMPLE_CV  # default
         if cv_id:
@@ -155,7 +157,7 @@ def analyze():
 
 @app.route('/api/compare-modes', methods=['POST'])
 def compare_modes_endpoint():
-    """Chạy 3 mode (local, ai, hybrid) và trả về so sánh."""
+    """Run 3 modes (local, ai, hybrid) and return comparison."""
     data = request.json
     cv_text = data.get('cv_text', '')
     jd_text = data.get('jd_text', '')
@@ -182,7 +184,7 @@ def compare_modes_endpoint():
 
 @app.route('/api/batch-analyze', methods=['POST'])
 def batch_analyze():
-    """So sánh CV với nhiều JD cùng lúc."""
+    """Compare CV against multiple JDs at once."""
     data = request.json
     cv_text = data.get('cv_text', '')
     jd_ids = data.get('jd_ids', [])
@@ -220,7 +222,7 @@ def batch_analyze():
                 'rate_limited': result.get('rate_limited', False),
             })
 
-            # Nếu bị rate limit, dừng batch
+            # Stop batch if rate limited
             if result.get('rate_limited'):
                 break
 
@@ -271,12 +273,16 @@ def upload_cv():
 
 
 if __name__ == '__main__':
+    # Fix Windows console Unicode encoding (cp1252 can't handle emoji)
+    if sys.stdout.encoding != 'utf-8':
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
     print("=" * 60)
     print("  PAVN ATS - Intelligent CV Matching System")
     print("  http://localhost:5000")
     print("=" * 60)
-    print(f"  📄 Sample CV: {SAMPLE_CV['filename'] if SAMPLE_CV else 'None'}")
-    print(f"  📋 Sample JDs: {len(SAMPLE_JDS)} file(s)")
+    print(f"  Sample CV: {SAMPLE_CV['filename'] if SAMPLE_CV else 'None'}")
+    print(f"  Sample JDs: {len(SAMPLE_JDS)} file(s)")
     for jd in SAMPLE_JDS:
         print(f"     - {jd['name']}")
     print("=" * 60)

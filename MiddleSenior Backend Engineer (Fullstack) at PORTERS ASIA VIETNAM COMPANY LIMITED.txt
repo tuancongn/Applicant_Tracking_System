@@ -1,0 +1,55 @@
+Middle/Senior Backend Engineer (Fullstack) at PORTERS ASIA VIETNAM COMPANY LIMITED
+
+Job brief
+
+We are looking for a Middle/Senior Backend Engineer (Fullstack) to join our product engineering team. You will work on developing and maintaining our cloud-based recruitment management platform — building backend APIs, full-stack features, and helping integrate AI-powered tools for smarter candidate matching.
+
+Your responsibilities
+
+Design, build, and maintain RESTful APIs and backend services using Python and Node.js.
+
+Develop full-stack web features with JavaScript frameworks such as React and Express.
+
+Build automated test suites and scripts to ensure code quality (Playwright, Pytest).
+
+Manage and optimize relational databases (PostgreSQL, SQL).
+
+Contribute to AI-assisted features using modern tools and libraries.
+
+Collaborate with the team in an agile environment, participating in code reviews and sprint planning.
+
+Write clean, well-documented, and maintainable code.
+
+Your skills and experience
+
+Proficiency in Python, Node.js, and JavaScript.
+
+Experience building web applications with React, Express.js, or similar frameworks.
+
+Strong knowledge of RESTful API design and implementation.
+
+Experience with SQL, PostgreSQL, or similar databases.
+
+Experience with automated testing tools such as Playwright or Pytest.
+
+Familiarity with AI/ML concepts — experience with libraries like Pandas, NumPy, or scikit-learn is a plus.
+
+Experience with CSS, frontend styling, and responsive design.
+
+Knowledge of Git, version control, and collaborative development workflows.
+
+Strong problem-solving skills, attention to detail, and ability to work in a team.
+
+English: Intermediate to Upper intermediate level.
+
+Bachelor's degree in Computer Science, Information Technology, or relevant field.
+
+Nice to have
+
+Experience with Supabase, Firebase, or BaaS platforms.
+
+Familiarity with deep learning, computer vision, or LLM applications.
+
+Exposure to cloud services (AWS, GCP) or containerization (Docker).
+
+Proficiency in Japanese will be a significant advantage.

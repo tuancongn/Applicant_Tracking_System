@@ -358,7 +358,7 @@ function renderResults(data) {
     if (ai && ai.summary) {
         summaryEl.textContent = ai.summary;
     } else {
-        summaryEl.textContent = `Based on ML analysis, CV has a ${scores.match_level.toLowerCase()} match with this position. Semantic Similarity: ${local.tfidf_similarity}%`;
+        summaryEl.textContent = `Based on ML analysis, CV has a ${scores.match_level.toLowerCase()} match with this position. Semantic Similarity: ${local.semantic_score}%`;
     }
 
     // Badges
