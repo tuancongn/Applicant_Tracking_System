@@ -1317,12 +1317,10 @@ class HybridAnalyzer:
         scores['is_it_job'] = local.get('is_it_job', False)
         return scores
 
-
 def analyze_cv_jd(cv_text: str, jd_text: str, mode: str = 'hybrid') -> dict:
     """Convenience function with mode support."""
     analyzer = HybridAnalyzer(cv_text, jd_text, mode=mode)
     return analyzer.analyze()
-
 
 def compare_modes(cv_text: str, jd_text: str) -> dict:
     """Run 3 modes and return comparison."""
